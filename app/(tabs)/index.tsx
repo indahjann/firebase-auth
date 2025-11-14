@@ -1,98 +1,127 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+// Lokasi: app/index.tsx
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  Alert,
+  SafeAreaView,
+  ActivityIndicator,
+  Button,
+  type ListRenderItem, // Import tipe untuk renderItem FlatList
+} from 'react-native';
+import { signOut } from 'firebase/auth';
+import { ref, get } from 'firebase/database';
+import { auth, db } from '../../firebaseConfig';
+import { getLoginInfo } from '../../storage';
+
+// 1. Definisikan tipe data Mahasiswa
+interface Mahasiswa {
+  id: string;
+  nama: string;
+  nim: string;
+  jurusan: string;
+}
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  // 2. Gunakan tipe Mahasiswa[] (array of Mahasiswa) untuk state list
+  const [mahasiswaList, setMahasiswaList] = useState<Mahasiswa[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const fetchMahasiswa = async () => {
+    try {
+      setLoading(true);
+      const dbRef = ref(db, 'mahasiswa');
+      const snapshot = await get(dbRef);
+
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        // Tipe 'list' akan otomatis dicek oleh TypeScript
+        const list: Mahasiswa[] = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setMahasiswaList(list);
+      } else {
+        console.log('Data tidak ditemukan');
+        setMahasiswaList([]);
+      }
+    } catch (e: any) {
+      console.error('Error fetching documents: ', e);
+      Alert.alert('Error', 'Gagal mengambil data mahasiswa.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMahasiswa();
+    const storedInfo = getLoginInfo();
+    console.log('Data dari MMKV di HomeScreen:', storedInfo);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error: any) {
+      Alert.alert('Logout Gagal', error.message);
+    }
+  };
+
+  // 3. Tentukan tipe untuk 'renderItem' menggunakan ListRenderItem
+  const renderItem: ListRenderItem<Mahasiswa> = ({ item }) => (
+    <View style={styles.itemContainer}>
+      <Text style={styles.itemTitle}>{item.nama}</Text>
+      <Text>
+        {item.nim} - {item.jurusan}
+      </Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Data Mahasiswa</Text>
+      {loading ? (
+        <ActivityIndicator size="large" />
+      ) : (
+        <FlatList
+          data={mahasiswaList}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          refreshing={loading}
+          onRefresh={fetchMahasiswa}
+        />
+      )}
+      <Button title="Logout" onPress={handleLogout} color="red" />
+    </SafeAreaView>
   );
 }
 
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  itemContainer: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    marginBottom: 10,
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
