@@ -32,16 +32,14 @@ export default function LoginScreen() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('[LOGIN] Login berhasil:', userCredential.user.email);
-      console.log('[LOGIN] Menunggu redirect otomatis dari _layout.tsx...');
-      
-      // Redirect otomatis ditangani oleh _layout.tsx
-      // Jangan set loading false, biarkan sampai redirect selesai
+      const user = userCredential.user;
+
+      console.log('[LOGIN] Login berhasil:', user.email);
+
     } catch (error: any) {
       console.error('[LOGIN] Login gagal:', error.code);
       let errorMessage = error.message;
 
-      // Pesan error yang lebih user-friendly
       if (error.code === 'auth/invalid-credential') {
         errorMessage = 'Email atau password salah';
       } else if (error.code === 'auth/user-not-found') {
@@ -83,7 +81,6 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
         />
-
         <TouchableOpacity
           style={styles.eyeButton}
           onPress={() => setShowPassword((s) => !s)}
@@ -113,97 +110,15 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    textAlign: 'center',
-    color: '#333',
-  },
-  input: {
-    backgroundColor: 'white',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    height: 50,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  loginButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  loginButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  registerText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  registerLink: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  checkboxLabel: {
-    marginLeft: 8,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  checkboxBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxBoxChecked: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  checkboxCheck: {
-    color: 'white',
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  passwordContainer: {
-    position: 'relative',
-    marginBottom: 15,
-  },
-  passwordInput: {
-    paddingRight: 44, // space for the eye icon inside the input
-  },
-  eyeButton: {
-    position: 'absolute',
-    right: 12,
-    top: 0,
-    bottom: 14,
-    justifyContent: 'center',
-    padding: 4,
-  },
+  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5', justifyContent: 'center' },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center', color: '#333' },
+  input: { backgroundColor: 'white', paddingHorizontal: 15, paddingVertical: 12, height: 50, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', marginBottom: 15, fontSize: 16 },
+  loginButton: { backgroundColor: '#007AFF', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  loginButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  registerContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+  registerText: { fontSize: 14, color: '#666' },
+  registerLink: { fontSize: 14, color: '#007AFF', fontWeight: '600' },
+  passwordContainer: { position: 'relative', marginBottom: 15 },
+  passwordInput: { paddingRight: 44 },
+  eyeButton: { position: 'absolute', right: 12, top: 0, bottom: 14, justifyContent: 'center', padding: 4 },
 });

@@ -1,88 +1,143 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { auth } from '../firebaseConfig';
-import { clearLoginInfo, saveLoginInfo } from '../storage';
+import { getLoginInfo, saveLoginInfo } from '../storage';
+
+// ============================================
+// Auth Context untuk share authentication state
+// ============================================
+
+const AuthContext = createContext<{
+  setIsAuthenticated: (value: boolean) => void;
+} | null>(null);
+
+/**
+ * Hook untuk mengakses authentication context
+ * Digunakan di screen yang butuh kontrol langsung atas auth state (misal: logout)
+ */
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth harus digunakan di dalam AuthProvider');
+  }
+  return context;
+};
+
+// ============================================
+// Root Layout Component
+// ============================================
 
 const RootLayout = () => {
-  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
   const segments = useSegments();
   const router = useRouter();
 
-  console.log('[LAYOUT] Component rendered, user state:', user?.email || String(user));
+  console.log('[LAYOUT] Render, isAuthenticated:', isAuthenticated);
 
-  // Auth listener
+  // ============================================
+  // 1. INITIAL LOAD - Cek sesi login dari MMKV
+  // ============================================
+  useEffect(() => {
+    console.log('[INIT] Mengambil user dari MMKV...');
+
+    const saved = getLoginInfo();
+
+    if (saved) {
+      // User sudah pernah login dan datanya masih tersimpan
+      console.log('[INIT] USER DITEMUKAN di MMKV:', saved.email);
+      setIsAuthenticated(true);
+    } else {
+      // Belum ada data login
+      console.log('[INIT] Tidak ada user di MMKV');
+      setIsAuthenticated(false);
+    }
+  }, []);
+
+  // ============================================
+  // 2. FIREBASE AUTH LISTENER
+  // ============================================
   useEffect(() => {
     console.log('[AUTH] Memulai auth listener...');
-    
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log('[AUTH] ⚡ Auth state changed:', currentUser?.email || 'null');
-      
+
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      console.log('[AUTH] ⚡ Firebase user changed:', currentUser?.email || 'null');
+
+      const stored = getLoginInfo();
+      console.log('[AUTH] MMKV stored:', stored?.email || 'null');
+
+      // CASE 1: User berhasil login
       if (currentUser) {
-        console.log('[AUTH] Saving user info to MMKV...');
         saveLoginInfo(currentUser);
-        console.log('[AUTH] Setting user state...');
-        setUser(currentUser);
-        console.log('[AUTH] User state updated!');
-      } else {
-        console.log('[AUTH] Clearing login info...');
-        clearLoginInfo();
-        setUser(null);
+        setIsAuthenticated(true);
+        console.log('[AUTH] User login & disimpan ke MMKV');
+        return;
+      }
+
+      // CASE 2: User logout manual (MMKV sudah dikosongkan)
+      if (!currentUser && !stored) {
+        console.log('[AUTH] User logout manual confirmed');
+        setIsAuthenticated(false);
+        console.log('[AUTH] User state set to FALSE');
+        return;
+      }
+
+      // CASE 3: App reload - Firebase kasih null sementara
+      // MMKV masih ada data → abaikan, user tetap login
+      if (!currentUser && stored) {
+        console.log('[AUTH] Firebase NULL diabaikan (MMKV masih ada - app reload)');
+        return;
       }
     });
 
-    return () => {
-      console.log('[AUTH] Cleaning up auth listener');
-      unsubscribe();
-    };
+    return unsub;
   }, []);
 
-  // Navigation handler - optimized tanpa delay
+  // ============================================
+  // 3. ROUTING - Auto navigate berdasarkan auth state
+  // ============================================
   useEffect(() => {
-    if (user === undefined) {
-      // Masih loading auth state
-      console.log('[ROUTING] Menunggu auth state...');
-      return;
-    }
+    if (isAuthenticated === undefined) return; // Masih loading, jangan navigate
 
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
-    
-    console.log('[ROUTING] ========== NAVIGATION CHECK ==========');
-    console.log('[ROUTING] Current segment:', segments[0] || 'root');
-    console.log('[ROUTING] User:', user ? `logged in (${user.email})` : 'not logged in');
-    console.log('[ROUTING] In auth group:', inAuthGroup);
+    const inAuth = segments[0] === 'login' || segments[0] === 'register';
 
-    if (user && inAuthGroup) {
-      // User login tapi masih di login/register page
-      console.log('[ROUTING] ✅ Redirecting to HOME...');
+    console.log('[ROUTING] isAuthenticated =', isAuthenticated);
+
+    if (isAuthenticated && inAuth) {
+      // User sudah login tapi masih di halaman login/register → redirect ke home
       router.replace('/');
-    } else if (!user && !inAuthGroup) {
-      // User tidak login tapi tidak di auth pages
-      console.log('[ROUTING] ✅ Redirecting to LOGIN...');
+      console.log('[ROUTING] → HOME');
+    } else if (!isAuthenticated && !inAuth) {
+      // User belum login tapi akses halaman yang butuh auth → redirect ke login
       router.replace('/login');
-    } else {
-      console.log('[ROUTING] ✓ Already in correct route');
+      console.log('[ROUTING] → LOGIN');
     }
-    console.log('[ROUTING] =======================================');
-  }, [user, segments]);
+  }, [isAuthenticated, segments]);
 
-  // Loading screen
-  if (user === undefined) {
+  // ============================================
+  // LOADING UI
+  // ============================================
+  if (isAuthenticated === undefined) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Memuat aplikasi...</Text>
+        <Text style={styles.loadingText}>Memuat sesi...</Text>
       </View>
     );
   }
 
+  // ============================================
+  // MAIN RENDER
+  // ============================================
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
-    </Stack>
+    <AuthContext.Provider value={{ setIsAuthenticated }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="register" />
+      </Stack>
+    </AuthContext.Provider>
   );
 };
 
@@ -101,3 +156,4 @@ const styles = StyleSheet.create({
 });
 
 export default RootLayout;
+

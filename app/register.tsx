@@ -21,7 +21,7 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   const handleRegister = async () => {
-    if (email === '' || password === '' || confirmPassword === '') {
+    if (!email || !password || !confirmPassword) {
       Alert.alert('Error', 'Semua field harus diisi');
       return;
     }
@@ -41,51 +41,46 @@ export default function RegisterScreen() {
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('[REGISTER] Registrasi berhasil:', userCredential.user.email);
+      const user = userCredential.user;
 
-      // Setelah membuat akun baru, pastikan user tidak otomatis login.
-      // Beberapa konfigurasi Firebase menganggap user sudah authenticated setelah pendaftaran,
-      // jadi kita segera sign out agar pengguna harus login secara manual.
+      console.log('[REGISTER] Registrasi berhasil untuk:', user.email);
+
+      // ❗ User otomatis login setelah register → kita force logout
       try {
         await signOut(auth);
-        console.log('[REGISTER] Sign-out setelah registrasi berhasil (force logout)');
-      } catch (signOutErr) {
-        console.warn('[REGISTER] Gagal sign-out setelah registrasi:', signOutErr);
+        console.log('[REGISTER] User di-logout otomatis (menghindari auto-login)');
+      } catch (err) {
+        console.warn('[REGISTER] Gagal logout otomatis:', err);
       }
 
       Alert.alert(
         'Registrasi Berhasil',
-        'Akun Anda telah dibuat. Silakan login untuk melanjutkan.',
+        'Akun Anda telah dibuat. Silakan login.',
         [
           {
             text: 'OK',
             onPress: () => {
-              console.log('[REGISTER] Navigasi ke Login');
               router.replace('/login');
-            },
-          },
+            }
+          }
         ]
       );
+
     } catch (error: any) {
       console.error('[REGISTER] Registrasi gagal:', error.code);
-      let errorMessage = error.message;
-      
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Email sudah terdaftar';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Email tidak valid';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password terlalu lemah';
-      }
-      
-      Alert.alert('Registrasi Gagal', errorMessage);
+      let msg = error.message;
+
+      if (error.code === 'auth/email-already-in-use') msg = 'Email sudah terdaftar';
+      if (error.code === 'auth/invalid-email') msg = 'Email tidak valid';
+      if (error.code === 'auth/weak-password') msg = 'Password terlalu lemah';
+
+      Alert.alert('Registrasi Gagal', msg);
     } finally {
       setLoading(false);
     }
   };
 
   const goToLogin = () => {
-    console.log('[NAVIGATION] Kembali ke Login');
     router.back();
   };
 
@@ -139,53 +134,12 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    textAlign: 'center',
-    color: '#333',
-  },
-  input: {
-    backgroundColor: 'white',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  registerButton: {
-    backgroundColor: '#34C759',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  registerButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  loginText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  loginLink: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
+  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5', justifyContent: 'center' },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, textAlign: 'center', color: '#333' },
+  input: { backgroundColor: 'white', paddingHorizontal: 15, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', marginBottom: 15, fontSize: 16 },
+  registerButton: { backgroundColor: '#34C759', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  registerButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  loginContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+  loginText: { fontSize: 14, color: '#666' },
+  loginLink: { fontSize: 14, color: '#007AFF', fontWeight: '600' },
 });
