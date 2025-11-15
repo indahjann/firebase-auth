@@ -40,9 +40,7 @@ export default function LoginScreen() {
       console.error('[LOGIN] Login gagal:', error.code);
       let errorMessage = error.message;
 
-      if (error.code === 'auth/invalid-credential') {
-        errorMessage = 'Email atau password salah';
-      } else if (error.code === 'auth/user-not-found') {
+      if (error.code === 'auth/user-not-found') {
         errorMessage = 'Akun tidak ditemukan';
       } else if (error.code === 'auth/wrong-password') {
         errorMessage = 'Password salah';

@@ -56,7 +56,7 @@ export default function HomeScreen() {
           id: doc.id,
           nama: data.nama,
           nim: data.nim,
-          jurusan: data.jurusan ?? data.program_studi ?? '',
+          jurusan: data.jurusan,
         };
       });
 

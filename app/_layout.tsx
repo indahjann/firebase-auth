@@ -75,9 +75,9 @@ const RootLayout = () => {
         return;
       }
 
-      // CASE 2: User logout manual (MMKV sudah dikosongkan)
+      // CASE 2: User logout
       if (!currentUser && !stored) {
-        console.log('[AUTH] User logout manual confirmed');
+        console.log('[AUTH] User logout confirmed');
         setIsAuthenticated(false);
         console.log('[AUTH] User state set to FALSE');
         return;
