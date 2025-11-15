@@ -78,7 +78,7 @@ Collection: mahasiswa
 ├── Document ID (auto-generated)
 │   ├── nama: string
 │   ├── nim: string
-│   └── program_studi: string
+│   └── jurusan: string
 ```
 
 ### Contoh Document:
@@ -86,7 +86,7 @@ Collection: mahasiswa
 {
   "nama": "Budi Santoso",
   "nim": "12345001",
-  "program_studi": "Teknik Informatika"
+  "jurusan": "Teknik Informatika"
 }
 ```
 
@@ -161,7 +161,7 @@ interface Mahasiswa {
   id: string;
   nama: string;
   nim: string;
-  program_studi: string;
+  jurusan: string;
 }
 ```
 

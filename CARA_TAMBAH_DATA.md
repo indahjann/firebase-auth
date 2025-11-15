@@ -22,7 +22,7 @@
    |-------|------|-------|
    | `nama` | string | `Budi Santoso` |
    | `nim` | string | `12345001` |
-   | `program_studi` | string | `Teknik Informatika` |
+   | `jurusan` | string | `Teknik Informatika` |
 
    - Klik **Save**
 
@@ -36,35 +36,35 @@
 ```
 nama: "Budi Santoso"
 nim: "12345001"
-program_studi: "Teknik Informatika"
+jurusan: "Teknik Informatika"
 ```
 
 ### Document 2:
 ```
 nama: "Siti Nurhaliza"
 nim: "12345002"
-program_studi: "Sistem Informasi"
+jurusan: "Sistem Informasi"
 ```
 
 ### Document 3:
 ```
 nama: "Ahmad Dahlan"
 nim: "12345003"
-program_studi: "Teknik Komputer"
+jurusan: "Teknik Komputer"
 ```
 
 ### Document 4:
 ```
 nama: "Dewi Lestari"
 nim: "12345004"
-program_studi: "Teknik Informatika"
+jurusan: "Teknik Informatika"
 ```
 
 ### Document 5:
 ```
 nama: "Rudi Tabuti"
 nim: "12345005"
-program_studi: "Sistem Informasi"
+jurusan: "Sistem Informasi"
 ```
 
 ## Verifikasi di Aplikasi:
@@ -76,7 +76,7 @@ program_studi: "Sistem Informasi"
 
 ## ⚠️ Catatan Penting:
 
-- **Field name harus sama persis**: `nama`, `nim`, `program_studi` (bukan `jurusan`)
+-- **Field name harus sama persis**: `nama`, `nim`, `jurusan` (bukan `program_studi`)
 - **Type harus string** untuk semua field
 - Collection name: **mahasiswa** (huruf kecil semua)
 - Jangan lupa set Firestore Rules agar user yang sudah login bisa read/write

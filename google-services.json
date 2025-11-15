@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1067511199348",
+    "project_id": "project-pbp-33b18",
+    "storage_bucket": "project-pbp-33b18.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1067511199348:android:ed239d569520e1ec3ec321",
+        "android_client_info": {
+          "package_name": "com.anonymous.firebaseauth"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBm0mjiKy-nYwzRXUXCk_JnyiB5FtC7DCg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

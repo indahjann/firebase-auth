@@ -1,81 +1,82 @@
-// Lokasi: app/_layout.tsx
-
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { onAuthStateChanged, type User } from 'firebase/auth'; // Import tipe User
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { auth } from '../firebaseConfig';
 import { clearLoginInfo, saveLoginInfo } from '../storage';
 
-// Custom Hook untuk memisahkan logika auth
-const useAuth = () => {
-  // Tipe state User bisa:
-  // - undefined: saat pertama kali load, belum dicek
-  // - User: jika login
-  // - null: jika logout
+const RootLayout = () => {
   const [user, setUser] = useState<User | null | undefined>(undefined);
+  const segments = useSegments();
+  const router = useRouter();
 
+  console.log('[LAYOUT] Component rendered, user state:', user?.email || String(user));
+
+  // Auth listener
   useEffect(() => {
-    // Parameter currentUser otomatis bertipe 'User | null'
+    console.log('[AUTH] Memulai auth listener...');
+    
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('[AUTH] ⚡ Auth state changed:', currentUser?.email || 'null');
+      
       if (currentUser) {
-        saveLoginInfo(currentUser); // SIMPAN KE MMKV
+        console.log('[AUTH] Saving user info to MMKV...');
+        saveLoginInfo(currentUser);
+        console.log('[AUTH] Setting user state...');
         setUser(currentUser);
+        console.log('[AUTH] User state updated!');
       } else {
-        clearLoginInfo(); // HAPUS DARI MMKV
+        console.log('[AUTH] Clearing login info...');
+        clearLoginInfo();
         setUser(null);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('[AUTH] Cleaning up auth listener');
+      unsubscribe();
+    };
   }, []);
 
-  return { user };
-};
-
-const RootLayout = () => {
-  const { user } = useAuth();
-  const segments = useSegments();
-  const router = useRouter();
-  const [loading, setLoading] = useState<boolean>(true); // Tipe state loading
-
+  // Navigation handler - optimized tanpa delay
   useEffect(() => {
-    // Tunggu sampai status user-nya jelas (bukan undefined)
     if (user === undefined) {
-      setLoading(true);
+      // Masih loading auth state
+      console.log('[ROUTING] Menunggu auth state...');
       return;
     }
 
-    setLoading(false); // Selesai loading
-
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+    
+    console.log('[ROUTING] ========== NAVIGATION CHECK ==========');
+    console.log('[ROUTING] Current segment:', segments[0] || 'root');
+    console.log('[ROUTING] User:', user ? `logged in (${user.email})` : 'not logged in');
+    console.log('[ROUTING] In auth group:', inAuthGroup);
 
-    if (user) {
-      // User sudah login
-      if (inAuthGroup) {
-        // Masih di halaman login/register -> redirect ke home
-        console.log('✅ User logged in, redirecting to home...');
-        setTimeout(() => router.replace('/'), 100);
-      }
+    if (user && inAuthGroup) {
+      // User login tapi masih di login/register page
+      console.log('[ROUTING] ✅ Redirecting to HOME...');
+      router.replace('/');
+    } else if (!user && !inAuthGroup) {
+      // User tidak login tapi tidak di auth pages
+      console.log('[ROUTING] ✅ Redirecting to LOGIN...');
+      router.replace('/login');
     } else {
-      // User belum login
-      if (!inAuthGroup) {
-        // Tidak di halaman login/register -> redirect ke login
-        console.log('❌ User not logged in, redirecting to login...');
-        setTimeout(() => router.replace('/login'), 100);
-      }
+      console.log('[ROUTING] ✓ Already in correct route');
     }
+    console.log('[ROUTING] =======================================');
   }, [user, segments]);
 
-  if (loading) {
+  // Loading screen
+  if (user === undefined) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Memuat aplikasi...</Text>
       </View>
     );
   }
 
-  // Tampilan navigasi
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
@@ -84,5 +85,19 @@ const RootLayout = () => {
     </Stack>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+});
 
 export default RootLayout;

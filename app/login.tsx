@@ -1,21 +1,23 @@
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth } from '../firebaseConfig';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
 
@@ -24,24 +26,47 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Email dan password tidak boleh kosong');
       return;
     }
+
     setLoading(true);
+    console.log('[LOGIN] Mencoba login dengan email:', email);
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('[LOGIN] Login berhasil:', userCredential.user.email);
+      console.log('[LOGIN] Menunggu redirect otomatis dari _layout.tsx...');
+      
       // Redirect otomatis ditangani oleh _layout.tsx
+      // Jangan set loading false, biarkan sampai redirect selesai
     } catch (error: any) {
-      Alert.alert('Login Gagal', error.message);
-    } finally {
-      setLoading(false);
+      console.error('[LOGIN] Login gagal:', error.code);
+      let errorMessage = error.message;
+
+      // Pesan error yang lebih user-friendly
+      if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Email atau password salah';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Akun tidak ditemukan';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Password salah';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Format email tidak valid';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Terlalu banyak percobaan. Coba lagi nanti.';
+      }
+
+      Alert.alert('Login Gagal', errorMessage);
+      setLoading(false); // Hanya set false kalau error
     }
   };
 
   const goToRegister = () => {
+    console.log('[NAVIGATION] Navigasi ke Register');
     router.push('/register');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Masuk</Text>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -50,19 +75,29 @@ export default function LoginScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={[styles.input, styles.passwordInput]}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+
+        <TouchableOpacity
+          style={styles.eyeButton}
+          onPress={() => setShowPassword((s) => !s)}
+          accessibilityLabel={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+        >
+          <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
       {loading ? (
         <ActivityIndicator size="large" color="#007AFF" />
       ) : (
         <>
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>Masuk</Text>
           </TouchableOpacity>
 
           <View style={styles.registerContainer}>
@@ -77,7 +112,6 @@ export default function LoginScreen() {
   );
 }
 
-// (Salin 'styles' dari App.js sebelumnya)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -96,6 +130,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingHorizontal: 15,
     paddingVertical: 12,
+    height: 50,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
@@ -128,6 +163,47 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  checkboxLabel: {
+    marginLeft: 8,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  checkboxBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxBoxChecked: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  checkboxCheck: {
+    color: 'white',
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 15,
+  },
+  passwordInput: {
+    paddingRight: 44, // space for the eye icon inside the input
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 14,
+    justifyContent: 'center',
+    padding: 4,
+  },
 });
-
-

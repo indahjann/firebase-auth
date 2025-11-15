@@ -1,16 +1,16 @@
 import { useRouter } from 'expo-router';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth } from '../firebaseConfig';
 
 export default function RegisterScreen() {
@@ -37,20 +37,39 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
+    console.log('[REGISTER] Mencoba registrasi dengan email:', email);
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('[REGISTER] Registrasi berhasil:', userCredential.user.email);
+
+      // Setelah membuat akun baru, pastikan user tidak otomatis login.
+      // Beberapa konfigurasi Firebase menganggap user sudah authenticated setelah pendaftaran,
+      // jadi kita segera sign out agar pengguna harus login secara manual.
+      try {
+        await signOut(auth);
+        console.log('[REGISTER] Sign-out setelah registrasi berhasil (force logout)');
+      } catch (signOutErr) {
+        console.warn('[REGISTER] Gagal sign-out setelah registrasi:', signOutErr);
+      }
+
       Alert.alert(
         'Registrasi Berhasil',
-        'Akun Anda telah dibuat. Silakan login.',
+        'Akun Anda telah dibuat. Silakan login untuk melanjutkan.',
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/login'),
+            onPress: () => {
+              console.log('[REGISTER] Navigasi ke Login');
+              router.replace('/login');
+            },
           },
         ]
       );
     } catch (error: any) {
+      console.error('[REGISTER] Registrasi gagal:', error.code);
       let errorMessage = error.message;
+      
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Email sudah terdaftar';
       } else if (error.code === 'auth/invalid-email') {
@@ -58,6 +77,7 @@ export default function RegisterScreen() {
       } else if (error.code === 'auth/weak-password') {
         errorMessage = 'Password terlalu lemah';
       }
+      
       Alert.alert('Registrasi Gagal', errorMessage);
     } finally {
       setLoading(false);
@@ -65,13 +85,14 @@ export default function RegisterScreen() {
   };
 
   const goToLogin = () => {
+    console.log('[NAVIGATION] Kembali ke Login');
     router.back();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Buat Akun Baru</Text>
-      
+
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -80,7 +101,7 @@ export default function RegisterScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      
+
       <TextInput
         style={styles.input}
         placeholder="Password"
@@ -88,7 +109,7 @@ export default function RegisterScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
-      
+
       <TextInput
         style={styles.input}
         placeholder="Konfirmasi Password"
@@ -96,7 +117,7 @@ export default function RegisterScreen() {
         onChangeText={setConfirmPassword}
         secureTextEntry
       />
-      
+
       {loading ? (
         <ActivityIndicator size="large" color="#007AFF" />
       ) : (
@@ -108,7 +129,7 @@ export default function RegisterScreen() {
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Sudah punya akun? </Text>
             <TouchableOpacity onPress={goToLogin}>
-              <Text style={styles.loginLink}>Login di sini</Text>
+              <Text style={styles.loginLink}>Masuk di sini</Text>
             </TouchableOpacity>
           </View>
         </>

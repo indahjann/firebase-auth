@@ -87,7 +87,7 @@ Lihat file `CARA_TAMBAH_DATA.md` untuk panduan lengkap.
 Singkatnya:
 1. Buka Firebase Console → Firestore
 2. Buat collection `mahasiswa`
-3. Tambah document dengan field: `nama`, `nim`, `program_studi`
+3. Tambah document dengan field: `nama`, `nim`, `jurusan`
 
 ### 3. Jalankan Aplikasi
 ```bash
@@ -121,7 +121,7 @@ Collection: mahasiswa
 ├── Document (auto-ID)
 │   ├── nama: string
 │   ├── nim: string
-│   └── program_studi: string
+│   └── jurusan: string
 ```
 
 ## 📱 User Flow

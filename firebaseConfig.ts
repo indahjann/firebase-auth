@@ -14,5 +14,25 @@ const firebaseConfig = {
 
 const app: FirebaseApp = initializeApp(firebaseConfig);
 
-export const auth: Auth = getAuth(app);
+// Try to initialize Auth with React Native persistence (AsyncStorage) if available.
+// Fallback to getAuth(app) when the react-native-specific module isn't present.
+let authInstance: Auth;
+try {
+  // Require at runtime to avoid TypeScript resolution issues in some environments
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const rnAuth = require('firebase/auth/react-native');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const { initializeAuth, getReactNativePersistence } = rnAuth;
+
+  authInstance = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  }) as Auth;
+  console.log('[FIREBASE] Initialized auth with React Native persistence (AsyncStorage)');
+} catch (e) {
+  console.warn('[FIREBASE] Could not initialize react-native auth persistence, falling back to getAuth:', e);
+  authInstance = getAuth(app);
+}
+
+export const auth: Auth = authInstance;
 export const db: Firestore = getFirestore(app);

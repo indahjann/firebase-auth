@@ -1,56 +1,74 @@
-import { createMMKV } from 'react-native-mmkv'; // PERBAIKAN IMPORT
+import { createMMKV } from 'react-native-mmkv';
 import { User } from 'firebase/auth';
 
 // Inisialisasi MMKV storage
 export const storage = createMMKV();
 
-// 1. Definisikan tipe data yang akan disimpan
+// Definisikan tipe data yang akan disimpan
 interface LoginInfo {
   uid: string;
-  email: string | null; // email bisa jadi null
+  email: string | null;
+  loginTime: string; // Tambahan untuk tracking
 }
 
 /**
- * Menyimpan data login pengguna
- * Kita beri tipe 'User' pada parameter
+ * Menyimpan data login pengguna ke MMKV
  */
 export const saveLoginInfo = (user: User): void => {
   try {
     const userInfo: LoginInfo = {
       uid: user.uid,
       email: user.email,
+      loginTime: new Date().toISOString(),
     };
     storage.set('loginInfo', JSON.stringify(userInfo));
-    console.log('Info login disimpan di MMKV:', userInfo);
+    console.log('[MMKV] Data DISIMPAN ke storage:', userInfo);
   } catch (e) {
-    console.error('Gagal menyimpan ke MMKV', e);
+    console.error('[MMKV] Gagal menyimpan ke storage:', e);
   }
 };
 
 /**
- * Mengambil data login pengguna
- * Kita beri tahu TypeScript tipe kembaliannya
+ * Mengambil data login pengguna dari MMKV
  */
 export const getLoginInfo = (): LoginInfo | null => {
   try {
     const value = storage.getString('loginInfo');
-    // Parse sebagai LoginInfo atau kembalikan null
-    return value ? (JSON.parse(value) as LoginInfo) : null;
+    const data = value ? (JSON.parse(value) as LoginInfo) : null;
+    console.log('[MMKV] Data DIAMBIL dari storage:', data);
+    return data;
   } catch (e) {
-    console.error('Gagal mengambil dari MMKV', e);
+    console.error('[MMKV] Gagal mengambil dari storage:', e);
     return null;
   }
 };
 
 /**
- * Menghapus data login (untuk logout)
- * Tipe kembaliannya adalah 'void' (tidak ada)
+ * Menghapus data login dari MMKV (untuk logout)
  */
 export const clearLoginInfo = (): void => {
   try {
-    storage.remove('loginInfo');
-    console.log('Info login dihapus dari MMKV.');
+    // Gunakan .delete() atau .remove() tergantung versi MMKV
+    // Coba delete dulu, kalau error fallback ke remove
+    if ('delete' in storage) {
+      (storage as any).delete('loginInfo');
+    } else {
+      storage.remove('loginInfo');
+    }
+    console.log('[MMKV] Data DIHAPUS dari storage');
   } catch (e) {
-    console.error('Gagal menghapus dari MMKV', e);
+    console.error('[MMKV] Gagal menghapus dari storage:', e);
+  }
+};
+
+/**
+ * Debug: Ambil raw data untuk ditampilkan
+ */
+export const getRawMMKVData = (): string => {
+  try {
+    const value = storage.getString('loginInfo');
+    return value || 'null';
+  } catch (e) {
+    return 'Error reading MMKV';
   }
 };
