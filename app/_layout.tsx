@@ -31,6 +31,7 @@ export const useAuth = () => {
 
 const RootLayout = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(undefined);
+  const [hasInitialRouted, setHasInitialRouted] = useState(false);
   const segments = useSegments();
   const router = useRouter();
 
@@ -101,15 +102,20 @@ const RootLayout = () => {
     if (isAuthenticated === undefined) return; // Masih loading, jangan navigate
 
     const inAuth = segments[0] === 'login' || segments[0] === 'register';
+    const isRootOrEmpty = !segments[0];
 
-    console.log('[ROUTING] isAuthenticated =', isAuthenticated);
+    console.log('[ROUTING] isAuthenticated =', isAuthenticated, 'segment =', segments[0]);
 
-    if (isAuthenticated && inAuth) {
-      // User sudah login tapi masih di halaman login/register → redirect ke home
-      router.replace('/');
-      console.log('[ROUTING] → HOME');
-    } else if (!isAuthenticated && !inAuth) {
-      // User belum login tapi akses halaman yang butuh auth → redirect ke login
+    // Initial routing: redirect ke welcome saat pertama kali load jika sudah login
+    if (isAuthenticated && isRootOrEmpty && !hasInitialRouted) {
+      router.replace('/welcome');
+      setHasInitialRouted(true);
+      console.log('[ROUTING] → WELCOME (initial load)');
+      return;
+    }
+
+    // Protect routes: redirect ke login jika belum login
+    if (!isAuthenticated && !inAuth) {
       router.replace('/login');
       console.log('[ROUTING] → LOGIN');
     }
@@ -134,6 +140,7 @@ const RootLayout = () => {
     <AuthContext.Provider value={{ setIsAuthenticated }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="welcome" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
       </Stack>

@@ -1,22 +1,20 @@
 import { useRouter } from 'expo-router';
-import { signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { collection, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   type ListRenderItem,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Navbar from '../components/navbar';
 import { auth, db } from '../firebaseConfig';
-import { clearLoginInfo } from '../storage';
-import { useAuth } from './_layout';
+import { getLoginInfo } from '../storage';
 
 // ============================================
 // Interface & Types
@@ -37,15 +35,20 @@ export default function HomeScreen() {
   const [mahasiswaList, setMahasiswaList] = useState<Mahasiswa[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
-  const { setIsAuthenticated } = useAuth();
 
   /**
    * Fetch data mahasiswa dari Firestore
    */
   const fetchMahasiswa = async () => {
+    if (!auth.currentUser) {
+      console.log('[FIRESTORE] User belum authenticated, skip fetch');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      console.log('[FIRESTORE] Mengambil data mahasiswa...');
+      console.log('[FIRESTORE] Mengambil data mahasiswa untuk user:', auth.currentUser.email);
 
       const mahasiswaCollection = collection(db, 'mahasiswa');
       const snapshot = await getDocs(mahasiswaCollection);
@@ -64,40 +67,52 @@ export default function HomeScreen() {
       console.log(`[FIRESTORE] Berhasil ambil ${list.length} data mahasiswa`);
     } catch (e: any) {
       console.error('[FIRESTORE] Error:', e);
-      Alert.alert('Error', 'Gagal mengambil data mahasiswa.');
+      // Tidak tampilkan alert error karena bisa terjadi saat app reload
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Handle logout user
-   * 1. Clear MMKV storage
-   * 2. Set isAuthenticated ke false
-   * 3. Navigate ke login page
-   * 4. Sign out dari Firebase (background)
-   */
-  const handleLogout = async () => {
-    try {
-      console.log('[LOGOUT] Memulai logout...');
-      
-      clearLoginInfo(); // Hapus semua data MMKV
-      setIsAuthenticated(false); // Langsung set auth state ke false
-      console.log('[LOGOUT] isAuthenticated set to FALSE');
-      
-      router.replace('/login'); // Navigate ke login page
-      
-      await signOut(auth); // Logout dari Firebase (background)
-      console.log('[LOGOUT] Firebase signOut selesai');
-    } catch (error: any) {
-      console.error('[LOGOUT] Error:', error);
-      Alert.alert('Logout Gagal', error.message);
-    }
-  };
-
-  // Fetch data saat screen pertama kali dibuka
+  // Listen to Firebase Auth state dan fetch data saat user ready
   useEffect(() => {
-    fetchMahasiswa();
+    console.log('[INDEX] Setup auth listener...');
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log('[INDEX] User authenticated:', user.email);
+        // Firebase Auth ready, fetch data
+        fetchMahasiswa();
+      } else {
+        // Firebase Auth belum ready atau user belum login
+        const loginInfo = getLoginInfo();
+        
+        if (loginInfo) {
+          // Ada data di MMKV, tunggu Firebase Auth restore session
+          console.log('[INDEX] MMKV menunjukkan user pernah login, tunggu Firebase Auth...');
+          
+          // Tunggu maksimal 10 detik untuk Firebase Auth ready
+          let retries = 0;
+          while (!auth.currentUser && retries < 20) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries++;
+            
+            if (auth.currentUser) {
+              console.log('[INDEX] Firebase Auth ready setelah', retries * 500, 'ms');
+              fetchMahasiswa();
+              return;
+            }
+          }
+          
+          console.log('[INDEX] Firebase Auth timeout setelah 10 detik');
+          setLoading(false);
+        } else {
+          console.log('[INDEX] No user authenticated');
+          setLoading(false);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   /**
@@ -116,10 +131,7 @@ export default function HomeScreen() {
       <ScrollView>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Data Mahasiswa App</Text>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Data Mahasiswa</Text>
         </View>
 
         {/* Daftar Mahasiswa */}
@@ -150,6 +162,8 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+      
+      <Navbar />
     </SafeAreaView>
   );
 }
@@ -162,25 +176,12 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#007AFF',
     padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-  },
-  logoutButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  logoutButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
+    textAlign: 'center',
   },
 
   mahasiswaSection: {

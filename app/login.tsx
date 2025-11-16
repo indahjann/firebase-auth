@@ -35,6 +35,9 @@ export default function LoginScreen() {
       const user = userCredential.user;
 
       console.log('[LOGIN] Login berhasil:', user.email);
+      // Navigate to welcome screen after successful login
+      setLoading(false);
+      router.replace('/welcome');
 
     } catch (error: any) {
       console.error('[LOGIN] Login gagal:', error.code);
